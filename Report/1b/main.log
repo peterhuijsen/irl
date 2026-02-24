@@ -1,10 +1,10 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.4.21)  17 FEB 2026 15:27
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.4.21)  24 FEB 2026 14:14
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
  %&-line parsing enabled.
-**/Users/yawm/Documents/GitHub/irl/Report/main.tex
-(/Users/yawm/Documents/GitHub/irl/Report/main.tex
+**main.tex
+(./main.tex
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
 (/usr/local/texlive/2025/texmf-dist/tex/latex/acmart/acmart.cls
@@ -840,21 +840,21 @@ LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
 Package rerunfilecheck Info: File `main.out' has not changed.
-(rerunfilecheck)             Checksum: EA1AE5C96F108336DABA8E606311EF92;1240.
+(rerunfilecheck)             Checksum: B3E410E3B3F3DF060D45688107471ECB;604.
  ) 
 Here is how much of TeX's memory you used:
- 20568 strings out of 473190
- 328049 string characters out of 5715800
- 778597 words of memory out of 5000000
- 43263 multiletter control sequences out of 15000+600000
- 619681 words of font info for 102 fonts, out of 8000000 for 9000
+ 20551 strings out of 473190
+ 327597 string characters out of 5715800
+ 774126 words of memory out of 5000000
+ 43259 multiletter control sequences out of 15000+600000
+ 618767 words of font info for 97 fonts, out of 8000000 for 9000
  1302 hyphenation exceptions out of 8191
- 90i,11n,131p,1041b,614s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 90i,11n,131p,1001b,614s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinBiolinumTB.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineT.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/libertine/LinLibertineTB.pfb>
-Output written on main.pdf (1 page, 237649 bytes).
+Output written on main.pdf (1 page, 231129 bytes).
 PDF statistics:
- 80 PDF objects out of 1000 (max. 8388607)
- 66 compressed objects within 1 object stream
- 13 named destinations out of 1000 (max. 500000)
- 28769 words of extra memory for PDF output out of 29859 (max. 10000000)
+ 63 PDF objects out of 1000 (max. 8388607)
+ 49 compressed objects within 1 object stream
+ 9 named destinations out of 1000 (max. 500000)
+ 26689 words of extra memory for PDF output out of 29859 (max. 10000000)
 
