@@ -13,10 +13,16 @@ class Agent(object):
 
         self.Q = np.zeros((n_states, n_actions))
         
+    def policy(self, state):
+        best_action = np.argmax(self.Q[state])
+        action_probabilities = np.ones(self.n_actions) * self.epsilon / self.n_actions
+        action_probabilities[best_action] += (1.0 - self.epsilon)
+        return action_probabilities
+        
     def select_action(self, state):
-        if np.random.random() < self.epsilon:
-            return np.random.randint(self.n_actions)
-        return np.argmax(self.Q[state])
+        action_probabilities = self.policy(state)
+        action = np.random.choice(self.n_actions, p=action_probabilities)
+        return action
      
     def train(self, n_episodes):
         raise NotImplementedError("This method should be implemented by subclasses of Agent.")
@@ -26,30 +32,30 @@ class QLearningAgent(Agent):
     def __init__(self, env: Environment, n_actions, n_states, epsilon=0.1, alpha=0.1, gamma=1.0):
         super().__init__(env, n_actions, n_states, epsilon, alpha, gamma)
         
-    def update(self, state, action, reward, next_state):
+    def update(self, state, action, reward, next_state, done):
         # Q-learning update rule
+        if done:
+            self.Q[state, action] = self.Q[state, action] + self.alpha * \
+                (reward - self.Q[state, action])    
+            return
+        
         self.Q[state, action] = self.Q[state, action] + self.alpha * \
             (reward + self.gamma * np.max(self.Q[next_state]) - self.Q[state, action])
         
     def train(self, n_episodes):
-        # TO DO: Implement the agent loop that trains for n_episodes. 
-        # Return a vector with the the cumulative reward (=return) per episode
         episode_returns = np.empty(n_episodes)
         for episode in range(n_episodes):
             self.env.reset()
-            state = self.env.state()
             cumulative_reward = 0
 
             while not self.env.done():
-                # Calculate the action and reward for that action.
+                state = self.env.state()
                 action = self.select_action(state)
                 reward = self.env.step(action)
 
-                # Update the Q-values based on the transition.
                 next_state = self.env.state()
-                self.update(state, action, reward, next_state)
+                self.update(state, action, reward, next_state, self.env.done())
 
-                state = next_state
                 cumulative_reward += reward
 
             episode_returns[episode] = cumulative_reward
@@ -61,91 +67,147 @@ class SARSAAgent(Agent):
     def __init__(self, env: Environment, n_actions, n_states, epsilon=0.1, alpha=0.1, gamma=1.0):
         super().__init__(env, n_actions, n_states, epsilon, alpha, gamma)
           
-    def update(self, state, action, reward, next_state, next_action):
+    def update(self, state, action, reward, next_state, next_action, done):
         # SARSA update rule
+        if done:
+            self.Q[state, action] = self.Q[state, action] + self.alpha * \
+                (reward - self.Q[state, action])
+            return
+        
         self.Q[state, action] = self.Q[state, action] + self.alpha * \
             (reward + self.gamma * self.Q[next_state, next_action] - self.Q[state, action])
         
     def train(self, n_episodes):
-        # TO DO: Implement the agent loop that trains for n_episodes. 
-        # Return a vector with the the cumulative reward (=return) per episode
-        episode_returns = []
-        for _ in range(n_episodes):
+        episode_returns = np.empty(n_episodes)
+        for episode in range(n_episodes):
             self.env.reset()
-            state = self.env.state()
-            action = self.select_action(state)
             cumulative_reward = 0
 
             while not self.env.done():
-                # First, calculate the reward.
+                state = self.env.state()
+                action = self.select_action(state)
                 reward = self.env.step(action)
 
-                # Calculate the next state, action, and reward.
                 next_state = self.env.state()
                 next_action = self.select_action(next_state)
+                self.update(state, action, reward, next_state, next_action, self.env.done())
 
-                # Update the Q-values based on the transition.
-                self.update(state, action, reward, next_state, next_action)
-
-                # Update next states
-                state, action = next_state, next_action
                 cumulative_reward += reward
 
-            episode_returns.append(cumulative_reward)
+            episode_returns[episode] = cumulative_reward
 
         return episode_returns
 
 
-class ExpectedSARSAAgent(object):
-
-    def __init__(self, n_actions, n_states, epsilon=0.1, alpha=0.1, gamma=1.0):
-        self.n_actions = n_actions
-        self.n_states = n_states
-        self.epsilon = epsilon
-        self.alpha = alpha
-        self.gamma = gamma
-        # TO DO: Initialize variables if necessary
+class ExpectedSARSAAgent(Agent):
+    def __init__(self, env: Environment, n_actions, n_states, epsilon=0.1, alpha=0.1, gamma=1.0):
+        super().__init__(env, n_actions, n_states, epsilon, alpha, gamma)
         
-    def select_action(self, state):
-        # TO DO: Implement policy
-        action = None
-        return action
+    def update(self, state, action, reward, next_state, done):
+        # Expected SARSA update rule
+        if done:
+            self.Q[state, action] = self.Q[state, action] + self.alpha * \
+                (reward - self.Q[state, action])
+            return
         
-    def update(self, state, action, reward, done): # Augment arguments if necessary
-        # TO DO: Implement Expected SARSA update
-        pass
+        self.Q[state, action] = self.Q[state, action] + self.alpha * \
+            (reward + self.gamma * np.sum(self.Q[next_state] * self.policy(next_state)) - self.Q[state, action])
 
     def train(self, n_episodes):
-        # TO DO: Implement the agent loop that trains for n_episodes. 
-        # Return a vector with the the cumulative reward (=return) per episode
-        episode_returns = []
-        return episode_returns    
+        episode_returns = np.empty(n_episodes)
+        for episode in range(n_episodes):
+            self.env.reset()
+            cumulative_reward = 0
+
+            while not self.env.done():
+                state = self.env.state()
+                action = self.select_action(state)
+                reward = self.env.step(action)
+
+                next_state = self.env.state()
+
+                self.update(state, action, reward, next_state, self.env.done())
+
+                cumulative_reward += reward
+
+            episode_returns[episode] = cumulative_reward
+
+        return episode_returns   
 
 
-class nStepSARSAAgent(object):
-
-    def __init__(self, n_actions, n_states, n, epsilon=0.1, alpha=0.1, gamma=1.0):
-        self.n_actions = n_actions
-        self.n_states = n_states
+class nStepSARSAAgent(Agent):
+    def __init__(self, env: Environment, n_actions, n_states, n, epsilon=0.1, alpha=0.1, gamma=1.0):
+        super().__init__(env, n_actions, n_states, epsilon, alpha, gamma)
         self.n = n
-        self.epsilon = epsilon
-        self.alpha = alpha
-        self.gamma = gamma
-        # TO DO: Initialize variables if necessary
+
+    def update_step(self, state, action, rewards, next_state, next_action):
+        # If we are not at a terminal node, then we only update the state-action pair
+        # which is n steps back.
+        bootstrap = self.gamma**len(rewards) * self.Q[next_state, next_action] if not self.env.done() else 0
+        G = sum([self.gamma**i * rewards[i] for i in range(len(rewards))]) + bootstrap
+        self.Q[state, action] = self.Q[state, action] + self.alpha * (
+            G - self.Q[state, action]
+        )
         
-    def select_action(self, state):
-        # TO DO: Implement policy
-        action = None
-        return action
+    def update_flush(self, states, actions, rewards):
+        # If we are at a terminal node, then we update all the state-action pairs 
+        # which still need to be updated.
+        for i in range(len(states)):
+            # Since we now know the final results we do not need to bootstrap, and 
+            # we can calculate the return G for each state-action pair directly 
+            # from the rewards received after that state-action pair.
+            G = sum([self.gamma**j * rewards[i + j] for j in range(len(rewards) - i)])
+            self.Q[states[i], actions[i]] = self.Q[states[i], actions[i]] + self.alpha * (
+                G - self.Q[states[i], actions[i]]
+            )
         
-    def update(self, states, actions, rewards, done): # Augment arguments if necessary
-        # TO DO: Implement n-step SARSA update
-        pass
-    
     def train(self, n_episodes):
-        # TO DO: Implement the agent loop that trains for n_episodes. 
-        # Return a vector with the the cumulative reward (=return) per episode
-        episode_returns = []
+        episode_returns = np.empty(n_episodes)
+        for episode in range(n_episodes):
+            self.env.reset()
+            cumulative_reward = 0
+            states, actions, rewards = [], [], []
+
+            state = self.env.state()
+            action = self.select_action(state)
+
+            while not self.env.done():                
+                reward = self.env.step(action)
+
+                states.append(state)
+                actions.append(action)
+                rewards.append(reward)
+
+                next_state = self.env.state()
+                next_action = self.select_action(next_state)
+
+                # We skip the first n steps before updating, however
+                # if we reach a terminal node before that, then we still
+                # need to update with the rewards received until that point.
+                if len(actions) >= self.n:
+                    self.update_step(
+                        state=states[-self.n],
+                        action=actions[-self.n],
+                        rewards=rewards[-self.n:],
+                        next_state=next_state,
+                        next_action=next_action
+                    )
+                    
+                state, action = next_state, next_action
+                cumulative_reward += reward
+
+            # If we have not yet updated the last n state-action pairs, then 
+            # we need to update them now with the rewards received until the 
+            # end of the episode.
+            tail = min(len(actions), self.n - 1)
+            if tail > 0:
+                self.update_flush(
+                    states=states[-tail:], 
+                    actions=actions[-tail:], 
+                    rewards=rewards[-tail:]
+                )
+
+            episode_returns[episode] = cumulative_reward
+
         return episode_returns  
-    
     
