@@ -7,8 +7,8 @@ import numpy as np
 from scipy.signal import savgol_filter
 from joblib import Parallel, delayed
 
-from ShortCutAgents import Agent, QLearningAgent
-from ShortCutEnvironment import Environment, ShortcutEnvironment
+from ShortCutAgents import Agent, QLearningAgent, SARSAAgent
+from ShortCutEnvironment import Environment, ShortcutEnvironment, WindyShortcutEnvironment
 
 def smooth(y, window, poly=1):
     """
@@ -23,6 +23,7 @@ class LearningCurvePlot:
         self.fig,self.ax = plt.subplots()
         self.ax.set_xlabel('Episode')
         self.ax.set_ylabel('Cumulative reward')
+        self.ax.set_ylim(bottom=-500, top=0)
         if title is not None:
             self.ax.set_title(title)
 
@@ -44,7 +45,7 @@ def plot_cumulative_rewards(inputs):
     plot = LearningCurvePlot(title='Cumulative reward per episode')
     for reward, label in inputs:
         plot.add_curve(reward, label=label)
-    plot.save()
+    return plot
 
 def run_single_repetition(
     spawn_env: Callable[[], Environment], 
@@ -62,7 +63,7 @@ def run_multiple_repetitions(
     num_episodes: int = 1000
 ):
     results = Parallel(n_jobs=-1)(
-        delayed(lambda: run_single_repetition(spawn_env, spawn_agent, num_episodes))()
+        delayed(run_single_repetition)(spawn_env, spawn_agent, num_episodes)
         for _ in range(num_repetitions)
     )
     rewards = np.array(results)
@@ -79,34 +80,13 @@ def run_experiment(
     for parameter in parameters:
         rewards = run_multiple_repetitions(
             spawn_env=spawn_env,
-            spawn_agent=lambda env: spawn_agent(env, parameter),
+            spawn_agent=lambda env, p=parameter: spawn_agent(env, p),
             num_repetitions=100,
         )
 
         results.append(rewards)
 
     return results
-
-def run_qlearning_experiment():
-    rewards = run_multiple_repetitions(
-        spawn_env=lambda: ShortcutEnvironment(),
-        spawn_agent=lambda env: QLearningAgent(n_actions=4, n_states=12**2, epsilon=0.1, alpha=0.1, gamma=1.0, env=env),
-        num_repetitions=100,
-    )
-
-    plot_cumulative_rewards([rewards, "QLearningAgent"])
-
-def run_qlearning_experiment_with_different_alphas():
-    alphas = [0.01, 0.1, 0.5, 0.9]
-    rewards = run_experiment(
-        spawn_env=lambda: ShortcutEnvironment(),
-        spawn_agent=lambda env, alpha: QLearningAgent(n_actions=4, n_states=12**2, epsilon=0.05, alpha=alpha, gamma=1.0, env=env),
-        parameters=alphas,
-    )
-
-    plot_cumulative_rewards([(reward, f"QLearningAgent: α = {alpha}") for reward, alpha in zip(rewards, alphas)])
-    
-run_qlearning_experiment_with_different_alphas()
 
 def plot_q_values(Q, env):
     grid_shape = (env.r, env.c)
@@ -178,8 +158,72 @@ def plot_q_values(Q, env):
     plt.tight_layout()  
     plt.show()
 
+def run_qlearning_experiment_with_different_alphas(environment_class):
+    alphas = [0.01, 0.1, 0.5, 0.9]
+    rewards = run_experiment(
+        spawn_env=lambda: environment_class(),
+        spawn_agent=lambda env, alpha: QLearningAgent(n_actions=4, n_states=12**2, epsilon=0.1, alpha=alpha, gamma=1.0, env=env),
+        parameters=alphas,
+    )
+
+    plot = plot_cumulative_rewards([(reward, f"QLearningAgent: α = {alpha}") for reward, alpha in zip(rewards, alphas)])
+    plot.save('Figures/qlearning_alpha_comparison.png')
+    
+def run_sarsa_experiment(environment_class):
+    rewards = run_multiple_repetitions(
+        spawn_env=lambda: environment_class(),
+        spawn_agent=lambda env: SARSAAgent(n_actions=4, n_states=12**2, epsilon=0.1, alpha=0.1, gamma=1.0, env=env),
+        num_repetitions=100,
+    )
+
+    plot = plot_cumulative_rewards([(rewards, "SARSAAgent")])
+    plot.save('Figures/sarsa.png')
+
+def run_sarsa_experiment_with_different_alphas(environment_class):
+    alphas = [0.01, 0.1, 0.5, 0.9]
+    rewards = run_experiment(
+        spawn_env=lambda: environment_class(),
+        spawn_agent=lambda env, alpha: SARSAAgent(n_actions=4, n_states=12**2, epsilon=0.1, alpha=alpha, gamma=1.0, env=env),
+        parameters=alphas,
+    )
+
+    plot = plot_cumulative_rewards([(reward, f"SARSAAgent: α = {alpha}") for reward, alpha in zip(rewards, alphas)])
+    plot.save('Figures/sarsa_alpha_comparison.png')
+
+def run_qlearning_vs_sarsa_experiment(environment_class):
+    qlearning_rewards = run_multiple_repetitions(
+        spawn_env=lambda: environment_class(),
+        spawn_agent=lambda env: QLearningAgent(n_actions=4, n_states=12**2, epsilon=0.1, alpha=0.1, gamma=1.0, env=env),
+        num_repetitions=100,
+    )
+
+    sarsa_rewards = run_multiple_repetitions(
+        spawn_env=lambda: environment_class(),
+        spawn_agent=lambda env: SARSAAgent(n_actions=4, n_states=12**2, epsilon=0.1, alpha=0.1, gamma=1.0, env=env),
+        num_repetitions=100,
+    )
+
+    plot = plot_cumulative_rewards([
+        (qlearning_rewards, "QLearningAgent"),
+        (sarsa_rewards, "SARSAAgent")
+    ])
+    plot.save('Figures/qlearning_vs_sarsa_comparison.png')
+    
+def experiments(environment_class):
+    print(f"Running QLearning experiment for {environment_class.__name__}...")
+    run_qlearning_experiment(environment_class=environment_class)
+
+    print(f"Running QLearning experiment with different alphas for {environment_class.__name__}...")
+    run_qlearning_experiment_with_different_alphas(environment_class=environment_class)
+
+    print(f"Running SARSAAgent experiment for {environment_class.__name__}...")
+    run_sarsa_experiment(environment_class=environment_class)
+
+    print(f"Running SARSAAgent experiment with different alphas for {environment_class.__name__}...")
+    run_sarsa_experiment_with_different_alphas(environment_class=environment_class)
+
+    print(f"Running QLearning vs SARSAAgent experiment for {environment_class.__name__}...")
+    run_qlearning_vs_sarsa_experiment(environment_class=environment_class)
+
 if __name__ == "__main__":
-    env = ShortcutEnvironment()
-    agent = QLearningAgent(n_actions=4, n_states=12**2, epsilon=0.1, alpha=0.1, gamma=1.0, env=env)
-    agent.train(n_episodes=1000)
-    plot_q_values(agent.Q, env)
+    experiments(environment_class=ShortcutEnvironment)

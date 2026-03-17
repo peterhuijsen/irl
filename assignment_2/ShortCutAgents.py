@@ -1,47 +1,71 @@
 import numpy as np
 
-from ShortCutEnvironment import ShortcutEnvironment
+from ShortCutEnvironment import Environment
 
 class Agent(object):
-    def __init__(self, n_actions, n_states, epsilon=0.1, alpha=0.1, gamma=1.0):
+    def __init__(self, env: Environment, n_actions, n_states, epsilon=0.1, alpha=0.1, gamma=1.0):
         self.n_actions = n_actions
         self.n_states = n_states
         self.epsilon = epsilon
         self.alpha = alpha
         self.gamma = gamma
+        self.env = env
 
         self.Q = np.zeros((n_states, n_actions))
         
     def select_action(self, state):
-        # Get the best current action.
-        best_action = np.argmax(self.Q[state])
-        policy = []
-
-        # For every action, we determine the probability of choosing it and add it 
-        # to the current policy.
-        for action in range(self.n_actions):
-            action_probability = 1 - self.epsilon if action == best_action else \
-                self.epsilon / (self.n_actions - 1)
-            policy.append(action_probability)
-
-        # Then we randomly choose one of the actions based on the pdf.
-        action = np.random.choice(self.n_actions, p=policy)
-        return action
+        if np.random.random() < self.epsilon:
+            return np.random.randint(self.n_actions)
+        return np.argmax(self.Q[state])
      
-    def train(self, n_episodes) -> list:
-        raise NotImplementedError("This method should be implemented by subclasses.")
+    def train(self, n_episodes):
+        raise NotImplementedError("This method should be implemented by subclasses of Agent.")
         
 
 class QLearningAgent(Agent):
-    def __init__(self, n_actions, n_states, epsilon=0.1, alpha=0.1, gamma=1.0, env=ShortcutEnvironment()):
-        super().__init__(n_actions, n_states, epsilon, alpha, gamma)
-        self.env = env
+    def __init__(self, env: Environment, n_actions, n_states, epsilon=0.1, alpha=0.1, gamma=1.0):
+        super().__init__(env, n_actions, n_states, epsilon, alpha, gamma)
         
-    def update(self, state, action, reward, next_state): # Augment arguments if necessary
+    def update(self, state, action, reward, next_state):
         # Q-learning update rule
         self.Q[state, action] = self.Q[state, action] + self.alpha * \
             (reward + self.gamma * np.max(self.Q[next_state]) - self.Q[state, action])
+        
+    def train(self, n_episodes):
+        # TO DO: Implement the agent loop that trains for n_episodes. 
+        # Return a vector with the the cumulative reward (=return) per episode
+        episode_returns = np.empty(n_episodes)
+        for episode in range(n_episodes):
+            self.env.reset()
+            state = self.env.state()
+            cumulative_reward = 0
 
+            while not self.env.done():
+                # Calculate the action and reward for that action.
+                action = self.select_action(state)
+                reward = self.env.step(action)
+
+                # Update the Q-values based on the transition.
+                next_state = self.env.state()
+                self.update(state, action, reward, next_state)
+
+                state = next_state
+                cumulative_reward += reward
+
+            episode_returns[episode] = cumulative_reward
+
+        return episode_returns
+
+
+class SARSAAgent(Agent):
+    def __init__(self, env: Environment, n_actions, n_states, epsilon=0.1, alpha=0.1, gamma=1.0):
+        super().__init__(env, n_actions, n_states, epsilon, alpha, gamma)
+          
+    def update(self, state, action, reward, next_state, next_action):
+        # SARSA update rule
+        self.Q[state, action] = self.Q[state, action] + self.alpha * \
+            (reward + self.gamma * self.Q[next_state, next_action] - self.Q[state, action])
+        
     def train(self, n_episodes):
         # TO DO: Implement the agent loop that trains for n_episodes. 
         # Return a vector with the the cumulative reward (=return) per episode
@@ -49,64 +73,22 @@ class QLearningAgent(Agent):
         for _ in range(n_episodes):
             self.env.reset()
             state = self.env.state()
-            cumulative_reward = 0
-
-            while not self.env.done():
-                # Select the action based on the policy
-                action = self.select_action(state)
-
-                # Update the environment and get the reward
-                reward = self.env.step(action)
-
-                # Update the Q-table based on the transition
-                s_next = self.env.state()
-                self.update(state, action, reward, s_next)
-
-                state = s_next
-                cumulative_reward += reward
-
-            episode_returns.append(cumulative_reward)
-
-        return episode_returns
-
-
-class SARSAAgent(Agent):
-
-    def __init__(self, n_actions, n_states, epsilon=0.1, alpha=0.1, gamma=1.0, env=ShortcutEnvironment()):
-        super().__init__(n_actions, n_states, epsilon, alpha, gamma)
-        self.env = env
-        
-    def select_action(self, state):
-        action = None
-        if np.random.rand() < self.epsilon:
-            action = np.random.choice(self.n_actions) # Explore
-        else:
-            action = np.argmax(self.Q[state]) # Exploit
-        
-        return action
-        
-    def update(self, state, action, reward, next_state, next_action): # Augment arguments if necessary
-        self.Q[state, action] += self.alpha * (reward + self.gamma * self.Q[next_state, next_action] - self.Q[state, action])
-
-    def train(self, n_episodes):
-        # TO DO: Implement the agent loop that trains for n_episodes. 
-        # Return a vector with the the cumulative reward (=return) per episode
-        episode_returns = []
-        for _ in range(n_episodes): 
-            self.env.reset()
-            state = self.env.state()
             action = self.select_action(state)
             cumulative_reward = 0
 
             while not self.env.done():
+                # First, calculate the reward.
                 reward = self.env.step(action)
+
+                # Calculate the next state, action, and reward.
                 next_state = self.env.state()
                 next_action = self.select_action(next_state)
 
+                # Update the Q-values based on the transition.
                 self.update(state, action, reward, next_state, next_action)
 
-                state = next_state
-                action = next_action
+                # Update next states
+                state, action = next_state, next_action
                 cumulative_reward += reward
 
             episode_returns.append(cumulative_reward)
