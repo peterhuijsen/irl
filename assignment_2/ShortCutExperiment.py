@@ -13,9 +13,9 @@ from ShortCutEnvironment import Environment, ShortcutEnvironment, WindyShortcutE
 
 class AgentType(Enum):
     QLearning = "QLearning"
-    SARSAAgent = "SARSAAgent"
-    ExpectedSARSAAgent = "ExpectedSARSAAgent"
-    NStepSARSAAgent = "NStepSARSAAgent"
+    SARSA = "SARSA"
+    ExpectedSARSA = "Expected SARSA"
+    NStepSARSA = "n-Step SARSA"
 
 class ExecutionType(Enum):
     Single = "Single"
@@ -320,10 +320,10 @@ def experiment(agents: Dict[AgentType, Set[ExecutionType]], environment_class):
             run_qlearning_plot_q_values(environment_class=environment_class)
 
     def experiment_sarsa():
-        if AgentType.SARSAAgent not in agents:
+        if AgentType.SARSA not in agents:
             return
         
-        execution_type = agents[AgentType.SARSAAgent]
+        execution_type = agents[AgentType.SARSA]
         if ExecutionType.Single in execution_type:
             print(f"Running single repetition of SARSAAgent experiment for {environment_class.__name__}...")
             run_sarsa_experiment(environment_class=environment_class)
@@ -335,10 +335,10 @@ def experiment(agents: Dict[AgentType, Set[ExecutionType]], environment_class):
             run_sarsa_plot_q_values(environment_class=environment_class)
 
     def experiment_expected_sarsa():
-        if AgentType.ExpectedSARSAAgent not in agents:
+        if AgentType.ExpectedSARSA not in agents:
             return
         
-        execution_type = agents[AgentType.ExpectedSARSAAgent]
+        execution_type = agents[AgentType.ExpectedSARSA]
         if ExecutionType.Single in execution_type:
             print(f"Running single repetition of ExpectedSARSAAgent experiment for {environment_class.__name__}...")
             run_expected_sarsa_experiment(environment_class=environment_class)
@@ -350,10 +350,10 @@ def experiment(agents: Dict[AgentType, Set[ExecutionType]], environment_class):
             run_expected_sarsa_plot_q_values(environment_class=environment_class)
 
     def experiment_n_step_sarsa():
-        if AgentType.NStepSARSAAgent not in agents:
+        if AgentType.NStepSARSA not in agents:
             return
         
-        execution_type = agents[AgentType.NStepSARSAAgent]
+        execution_type = agents[AgentType.NStepSARSA]
         if ExecutionType.Single in execution_type:
             print(f"Running single repetition of n-Step SARSAAgent experiment for {environment_class.__name__}...")
             run_n_step_sarsa_experiment(environment_class=environment_class)
@@ -412,17 +412,17 @@ if __name__ == "__main__":
                 ExecutionType.Multiple, 
                 ExecutionType.Q
             },
-            AgentType.SARSAAgent: { 
+            AgentType.SARSA: { 
                 ExecutionType.Single, 
                 ExecutionType.Multiple, 
                 ExecutionType.Q
             },
-            AgentType.ExpectedSARSAAgent: { 
+            AgentType.ExpectedSARSA: { 
                 ExecutionType.Single, 
                 ExecutionType.Multiple,
                 ExecutionType.Q
             },
-            AgentType.NStepSARSAAgent: { 
+            AgentType.NStepSARSA: { 
                 ExecutionType.Single, 
                 ExecutionType.Multiple,
                 ExecutionType.Q

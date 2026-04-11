@@ -181,9 +181,7 @@ class nStepSARSAAgent(Agent):
                 next_state = self.env.state()
                 next_action = self.select_action(next_state)
 
-                # We skip the first n steps before updating, however
-                # if we reach a terminal node before that, then we still
-                # need to update with the rewards received until that point.
+                # We skip the first n steps before updating.
                 if len(actions) >= self.n:
                     self.update_step(
                         state=states[-self.n],
