@@ -47,15 +47,17 @@ class QLearningAgent(Agent):
         for episode in range(n_episodes):
             self.env.reset()
             cumulative_reward = 0
+            
+            state = self.env.state()
 
             while not self.env.done():
-                state = self.env.state()
                 action = self.select_action(state)
                 reward = self.env.step(action)
-
                 next_state = self.env.state()
+                
                 self.update(state, action, reward, next_state, self.env.done())
 
+                state = next_state
                 cumulative_reward += reward
 
             episode_returns[episode] = cumulative_reward
@@ -83,15 +85,17 @@ class SARSAAgent(Agent):
             self.env.reset()
             cumulative_reward = 0
 
+            state = self.env.state()
+            action = self.select_action(state)
+
             while not self.env.done():
-                state = self.env.state()
-                action = self.select_action(state)
                 reward = self.env.step(action)
 
                 next_state = self.env.state()
                 next_action = self.select_action(next_state)
                 self.update(state, action, reward, next_state, next_action, self.env.done())
 
+                state, action = next_state, next_action
                 cumulative_reward += reward
 
             episode_returns[episode] = cumulative_reward
@@ -118,21 +122,53 @@ class ExpectedSARSAAgent(Agent):
         for episode in range(n_episodes):
             self.env.reset()
             cumulative_reward = 0
+            
+            state = self.env.state()
 
             while not self.env.done():
-                state = self.env.state()
                 action = self.select_action(state)
                 reward = self.env.step(action)
-
                 next_state = self.env.state()
-
+                
                 self.update(state, action, reward, next_state, self.env.done())
 
+                state = next_state
                 cumulative_reward += reward
 
             episode_returns[episode] = cumulative_reward
 
         return episode_returns   
+
+class DecayingExpectedSARSAAgent(ExpectedSARSAAgent):
+    def __init__(self, env: Environment, n_actions, n_states, epsilon=0.1, alpha=0.1, gamma=1.0, decay_rate=0.99, decay_floor=0.01):
+        super().__init__(env, n_actions, n_states, epsilon, alpha, gamma)
+        self.decay_rate = decay_rate
+        self.decay_floor = decay_floor
+
+    def train(self, n_episodes):
+        episode_returns = np.empty(n_episodes)
+        for episode in range(n_episodes):
+            self.env.reset()
+            cumulative_reward = 0
+            
+            state = self.env.state()
+
+            while not self.env.done():
+                action = self.select_action(state)
+                reward = self.env.step(action)
+                next_state = self.env.state()
+                
+                self.update(state, action, reward, next_state, self.env.done())
+
+                state = next_state
+                cumulative_reward += reward
+
+            episode_returns[episode] = cumulative_reward
+
+            # Decrease epsilon after each episode to encourage more exploitation over time.
+            self.epsilon = max(self.decay_floor, self.epsilon * self.decay_rate)
+
+        return episode_returns
 
 
 class nStepSARSAAgent(Agent):
