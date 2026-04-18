@@ -13,18 +13,18 @@ class Agent(object):
 
         self.Q = np.zeros((n_states, n_actions))
         
-    def policy(self, state):
+    def policy(self, state) -> np.ndarray:
         best_action = np.argmax(self.Q[state])
         action_probabilities = np.ones(self.n_actions) * self.epsilon / self.n_actions
         action_probabilities[best_action] += (1.0 - self.epsilon)
         return action_probabilities
         
-    def select_action(self, state):
+    def select_action(self, state) -> int:
         action_probabilities = self.policy(state)
         action = np.random.choice(self.n_actions, p=action_probabilities)
         return action
      
-    def train(self, n_episodes):
+    def train(self, n_episodes) -> np.ndarray:
         raise NotImplementedError("This method should be implemented by subclasses of Agent.")
         
 
@@ -42,7 +42,7 @@ class QLearningAgent(Agent):
         self.Q[state, action] = self.Q[state, action] + self.alpha * \
             (reward + self.gamma * np.max(self.Q[next_state]) - self.Q[state, action])
         
-    def train(self, n_episodes):
+    def train(self, n_episodes) -> np.ndarray:
         episode_returns = np.empty(n_episodes)
         for episode in range(n_episodes):
             self.env.reset()
@@ -79,7 +79,7 @@ class SARSAAgent(Agent):
         self.Q[state, action] = self.Q[state, action] + self.alpha * \
             (reward + self.gamma * self.Q[next_state, next_action] - self.Q[state, action])
         
-    def train(self, n_episodes):
+    def train(self, n_episodes) -> np.ndarray:
         episode_returns = np.empty(n_episodes)
         for episode in range(n_episodes):
             self.env.reset()
@@ -117,7 +117,7 @@ class ExpectedSARSAAgent(Agent):
         self.Q[state, action] = self.Q[state, action] + self.alpha * \
             (reward + self.gamma * np.sum(self.Q[next_state] * self.policy(next_state)) - self.Q[state, action])
 
-    def train(self, n_episodes):
+    def train(self, n_episodes) -> np.ndarray:
         episode_returns = np.empty(n_episodes)
         for episode in range(n_episodes):
             self.env.reset()
@@ -145,7 +145,7 @@ class DecayingExpectedSARSAAgent(ExpectedSARSAAgent):
         self.decay_rate = decay_rate
         self.decay_floor = decay_floor
 
-    def train(self, n_episodes):
+    def train(self, n_episodes) -> np.ndarray:
         episode_returns = np.empty(n_episodes)
         for episode in range(n_episodes):
             self.env.reset()
@@ -197,7 +197,7 @@ class nStepSARSAAgent(Agent):
                 G - self.Q[states[i], actions[i]]
             )
         
-    def train(self, n_episodes):
+    def train(self, n_episodes) -> np.ndarray:
         episode_returns = np.empty(n_episodes)
         for episode in range(n_episodes):
             self.env.reset()
