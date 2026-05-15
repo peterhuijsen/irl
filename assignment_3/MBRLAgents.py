@@ -99,7 +99,7 @@ class PrioritizedSweepingAgent:
 
         self.priority_cutoff = priority_cutoff
         self.queue = PriorityQueue()
-        
+
         self.Q_sa = np.zeros((n_states, n_actions), dtype=float)
         self.N = np.zeros((n_states, n_actions, n_states), dtype=int)
         self.R = np.zeros((n_states, n_actions, n_states), dtype=float)
@@ -129,7 +129,7 @@ class PrioritizedSweepingAgent:
         def update_queue(s, a, r, s_next, done):
             p = np.abs(r + self.gamma * (not done) * np.max(self.Q_sa[s_next]) - self.Q_sa[s, a])
             if p > self.priority_cutoff:
-                self.queue.put((-p, (s, a)))   
+                self.queue.put((-p, (s, a)))
 
         def update_Q_sa(s, a, r, s_next, done):
             self.Q_sa[s, a] = self.Q_sa[s, a] + self.learning_rate * (r + self.gamma * (not done) * np.max(self.Q_sa[s_next]) - self.Q_sa[s, a])
@@ -137,28 +137,26 @@ class PrioritizedSweepingAgent:
         # Update the model based on the observed transition
         update_model()
 
-        # Update the PQ
+        # Compute priority for the observed transition and insert into PQ
         update_queue(s, a, r, s_next, done)
 
-        # Planning updates
+        # Planning updates: repeat K times, break when PQ is empty
         for _ in range(n_planning_updates):
             if self.queue.empty():
-                return
+                break
 
-            # Get the state and action from the PQ
+            # Pop highest priority from PQ
             _, (s, a) = self.queue.get()
-    
-            # Then sample the next action and get the reward from that action
+
+            # Simulate model: (s', r) ~ p̂(s', r | s, a)
             s_next = np.random.choice(range(self.n_states), p=self.p[s, a, :])
             r = self.r[s, a, s_next]
 
-            # Update the Q-values based on the model
+            # Update Q-table
             update_Q_sa(s, a, r, s_next, done=False)
 
-            # Then we go through all the ways we could have ended up at the current
-            # state and add those to the queue
-            possibilities = list(zip(*np.where(self.N[..., s] > 0)))
-            for s_p, a_p in possibilities:
+            # Loop over all (s̄, ā) with n(s̄, ā, s) > 0
+            for s_p, a_p in zip(*np.where(self.N[..., s] > 0)):
                 r_p = self.r[s_p, a_p, s]
                 update_queue(s_p, a_p, r_p, s, done=False)
 
